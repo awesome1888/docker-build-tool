@@ -32,7 +32,7 @@ project/
     run.js  
 ~~~~
 
-Whe have two apps there, united into one installation described in `all.development.yml`. For example, like this: 
+We have two apps there, combined into one installation described in `all.development.yml`. For example, like this: 
 
 ~~~~
 version: '3'
