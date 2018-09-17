@@ -121,7 +121,7 @@ module.exports = class Application1 extends Application {
 };
 ~~~~
 
-Typically, inside `buildClient()` and `buildServer()` there should be valid webpack (or whatever suits you) implemented. See examples of `application.js` files inside `examples/` folder of this repo.
+Typically, inside `buildClient()` and `buildServer()` there should be a valid webpack (or whatever suits you) pipeline implemented. See examples of `application.js` files inside `examples/` folder of this repo.
 And finally, our `development.dockerfile` may look like the following:
 
 ~~~~
@@ -144,6 +144,12 @@ COPY ./client/public/ ./public/
 COPY ./client/build/development/ ./public/
 
 CMD [ "npm", "start" ]
+~~~~
+
+To start the project, make `run.js` executable and run it:
+~~~~
+chmod +x ./run.js
+./run.js
 ~~~~
 
 I hope you will enjoy the module.
