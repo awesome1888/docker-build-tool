@@ -163,19 +163,19 @@ const MainClass = class Project {
 
         this.log('Rebuilding sources...');
         Promise.all(all.map((change) => {
-            return change.task.build(change.params).catch((e) => {
-                // console.dir(e);
+            return change.task.build(change.params).catch(() => {
                 failure = true;
                 this.informActionFailed(change);
             });
         })).then(() => {
-
             if (!failure) {
                 const images = [];
                 const names = [];
+                const imageNames = {};
                 all.forEach((change) => {
-                    if (change.task.needRebuildImage()) {
+                    if (change.task.needRebuildImage() && !imageNames[change.application.getName()]) {
                         images.push(change);
+                        imageNames[change.application.getName()] = true;
                     }
 
                     names.push(`${change.application.getName()}:${change.task.getName()}`);
