@@ -19,6 +19,8 @@ const MainClass = class Project {
         this.buildNext = this.buildNext.bind(this);
         this.buildImagesNext = this.buildImagesNext.bind(this);
         this.compositionRestartNext = this.compositionRestartNext.bind(this);
+
+        this.log = this.log.bind(this);
     }
 
     getName() {
@@ -161,7 +163,8 @@ const MainClass = class Project {
 
         this.log('Rebuilding sources...');
         Promise.all(all.map((change) => {
-            return change.task.build(change.params).catch(() => {
+            return change.task.build(change.params).catch((e) => {
+                // console.dir(e);
                 failure = true;
                 this.informActionFailed(change);
             });
@@ -320,7 +323,7 @@ const MainClass = class Project {
                 }
 
                 const Application = require(file);
-                const application = new Application();
+                const application = new Application(this.getParams(), this);
 
                 application.setName(app.__code);
 
@@ -355,6 +358,7 @@ const MainClass = class Project {
                 stdoutTo: process.stdout,
                 stderrTo: process.stdout,
                 dockerComposeFilePath: this.getCompositionFile(),
+                logger: this.getParams().exposeCLI ? this.log : null,
             });
         }
 

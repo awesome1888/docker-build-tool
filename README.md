@@ -70,8 +70,10 @@ There is also a script called `run.js`, which may look like the following:
 
 const Project = require('docker-webpack');
 (new Project({
-    name: 'project-name',
-    composeFile: `${__dirname}/../docker/all.development.yml`,
+    name: 'project-name', // mandatory
+    composeFile: `${__dirname}/../docker/all.development.yml`, // mandatory
+    exposeCLI: false, // optional, set to true for debug purposes to see what commands get executed along the way
+    dockerLogsPollingInterval: 1000, // optional, use this to alter the polling interval. Higher amounts will cause output lag
 })).run();
 ~~~~
 
@@ -151,5 +153,18 @@ To start the project, make `run.js` executable and run it:
 chmod +x ./run.js
 ./run.js
 ~~~~
+
+The very first execution may take a while, because it will:
+
+* Install all node dependencies of your project, if you have any `package.json` files
+* Produce `webpack` output (or other kind of output)
+* Pull all base images specified in your `Dockerfiles` and make layer fs caches
+
+You will find the output in 
+`/tmp/build-tool/%project_name%/%application_name_from_docker-compose_file%/log/output` file, so you basically can do `tail -f -n 10 %file%` on it.
+
+## Known bugs
+
+* Sometimes it gets output from docker container twice. It happens because we use output polling and sometimes it does not work out well :/ We are searching for better way to handle this.
 
 I hope you will enjoy the module.
