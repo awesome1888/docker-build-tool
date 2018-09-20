@@ -36,6 +36,16 @@ const MainClass = class Project {
     }
 
     async run() {
+
+        // pre-checks
+        const haveDockerCompose = await Util.testCmd('docker-compose -v', 'docker-compose version').catch(() => {
+            return false;
+        });
+        if (!haveDockerCompose) {
+            this.log('It seems you don\'t have docker-compose yet. Please, consider installing docker-compose for your operation system.');
+            return;
+        }
+
         const apps = this.getApplications();
         const destinationFolder = _.isStringNotEmpty(this.getParams().destinationFolder) ? this.getParams().destinationFolder : '#TASK_FOLDER#build/#MODE_NAME#/';
 
