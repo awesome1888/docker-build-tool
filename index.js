@@ -98,7 +98,7 @@ const MainClass = class Project {
         if (_.isFunction(this.getParams().onActionFailed)) {
             this.getParams().onActionFailed(change, this);
         } else {
-            this.log(`Build failed, look for details: ./script/log.sh ${change.application.getName()}`);
+            this.log(`Build failed for ${change.application.getName()}:${change.task.getName()}`);
         }
     }
 
@@ -419,8 +419,7 @@ const MainClass = class Project {
             const path = Path.fillTemplate(`${Path.getToolTemporaryFolder()}/${this.getTemporarySubFolder()}/log/`, {
                 application,
             });
-            Util.makeFolder(path);
-
+            
             this._streams[code] = Util.makeStream(`${path}/output`);
         }
 
