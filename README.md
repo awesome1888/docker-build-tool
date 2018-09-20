@@ -156,7 +156,7 @@ chmod +x ./run.js
 
 The very first execution may take a while, because it will:
 
-* Install all node dependencies of your project, if you have any `package.json` files
+* Install all node dependencies of your project applications, if you have any `package.json` files in there
 * Produce `webpack` output (or other kind of output)
 * Pull all base images specified in your `Dockerfiles` and make layer fs caches
 
@@ -166,5 +166,6 @@ You will find the output in
 ## Known bugs
 
 * Sometimes it gets output from docker container twice. It happens because we use output polling and sometimes it does not work out well :/ We are searching for better way to handle this.
+* Tested only on Linux inside a warm and comfy virtual box environment
 
 I hope you will enjoy the module.

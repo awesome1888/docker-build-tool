@@ -5,8 +5,8 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
-const Application = require('docker-webpack').Application;
-const WebpackTool = require('docker-webpack').WebpackTool;
+const Application = require('docker-build-tool').Application;
+const WebpackTool = require('docker-build-tool').WebpackTool;
 
 module.exports = class ApplicationClientServer extends Application {
 
