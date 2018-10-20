@@ -6,7 +6,7 @@ const chokidar = require('chokidar');
 const Queue = require('./lib/queue.js');
 const DockerCompose = require('./lib/docker-compose.js');
 const LogPoller = require('./lib/log-poller.js');
-const BuildContext = require('./lib/build-context.js');
+const BuildContext = require('./lib/context.js');
 const Docker = require('./lib/docker.js');
 const Application = require('./lib/application.js');
 const WebpackTool = require('./lib/webpack-tool.js');
@@ -27,19 +27,18 @@ const MainClass = class Project {
         return this.getParams().name;
     }
 
-    getTemporarySubFolder() {
-        return `${this.getName()}/#APPLICATION_NAME#/`;
-    }
+	getProjectFolder() {
+		return this.getParams().projectFolder;
+	}
 
     getParams() {
         return this._options || {};
     }
 
-    getApplicationFolder() {
-        return this.getParams().srcFolder || '';
-    }
-
     async run() {
+	    console.dir(`Project folder: ${this.getProjectFolder()}`);
+	    console.dir(`Compose file: ${this.getCompositionFile()}`);
+
         // pre-checks
         const haveDockerCompose = await Util.testCmd('docker-compose -v', 'docker-compose version').catch(() => {
             return false;
@@ -50,30 +49,33 @@ const MainClass = class Project {
         }
 
         const apps = this.getApplications();
-	    console.dir(apps);
-	    return;
-
         const destinationFolder = _.isStringNotEmpty(this.getParams().destinationFolder) ? this.getParams().destinationFolder : '#TASK_FOLDER#build/#MODE_NAME#/';
-
-	    await apps[1].getTasks()[0].build();
-	    console.dir('build done!');
-	    // console.dir(apps);
-	    // console.dir(destinationFolder);
-
-        return;
-
         // spin-up all loops and watch files
-        this.hangOnSigInt();
-        this.spinUpBuildLoop();
-        this.spinUpBuildImagesLoop();
-        this.spinUpCompositionRestartLoop();
-        this.getLogPoller().spinUp();
+        // this.hangOnSigInt();
+        // this.spinUpBuildLoop();
+        // this.spinUpBuildImagesLoop();
+        // this.spinUpCompositionRestartLoop();
+        // this.getLogPoller().spinUp();
 
         const params = {
             production: false,
             temporarySubFolder: this.getTemporarySubFolder(),
             destinationFolder,
         };
+
+        for (let k = 0; k < apps.length; k++) {
+            const ts = apps[k].getTasks();
+	        for (let m = 0; m < ts.length; m++) {
+		        console.dir('making next');
+	            await ts[m].build({
+		            ...params,
+		            stdoutTo: this.getStream(apps[k]),
+		            stderrTo: this.getStream(apps[k]),
+	            });
+	        }
+        }
+
+        return;
 
         // 1) build all
         apps.forEach((app) => {
@@ -332,6 +334,8 @@ const MainClass = class Project {
             const composition = this.getComposition().getSchema();
             const dockerBase = Util.getParentPath(this.getCompositionFile());
 
+	        console.dir(`Docker base: ${dockerBase}`);
+
             const apps = [];
 
             // parse dockerfile composition and get build instructions
@@ -342,19 +346,17 @@ const MainClass = class Project {
                 }
                 const dstRoot = `${dockerBase}/${app.build.context}/`;
 
+	            console.dir(`Docker context for the app "${app.__code}": ${dstRoot}`);
+
                 // here we resolve webpack files...
                 const files = this.resolveWebpackFiles(dstRoot);
 	            if (!_.isArrayNotEmpty(files)) {
 	                throw new Error(`Nothing to do for application ${app.__code} (no webpack files detected)`);
 	            }
-
-                const includes = this.include(files, app.__code);
-	            console.dir(includes);
-
-	            const application = new Application(includes, this.getParams(), this);
+	            const application = new Application(this.include(files, app.__code), this.getParams(), this);
 	            application.setName(app.__code);
 
-	            // apps.push(application);
+	            apps.push(application);
             });
 
             this._applications = apps;
@@ -364,10 +366,11 @@ const MainClass = class Project {
     }
 
 	include(files, appCode) {
-		const res = {};
+		const result = [];
 
 		files.forEach((file) => {
 			const inc = require(file);
+			const res = {};
 
 			// look for main builder
 			if (_.isFunction(inc)) {
@@ -386,9 +389,11 @@ const MainClass = class Project {
 			if (!_.isFunction(res.getSrcFolder)) {
 				throw new Error(`Webpack configurator does not export .getSrcFolder() function for app "${appCode}": ${file}`);
 			}
+
+			result.push(res);
         });
 
-		return res;
+		return result;
     }
 
 	resolveWebpackFiles(root) {
@@ -522,6 +527,10 @@ const MainClass = class Project {
             console.log(data.toString().replace(/(\r\n|\r|\n)+$/g, ''));
         }
     }
+
+	getTemporarySubFolder() {
+		return `${this.getName()}/#APPLICATION_NAME#/`;
+	}
 };
 
 module.exports = MainClass;
