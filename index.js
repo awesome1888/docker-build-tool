@@ -75,6 +75,8 @@ const MainClass = class Project {
 	        }
         }
 
+        console.dir('DONE =============');
+
         return;
 
         // 1) build all
