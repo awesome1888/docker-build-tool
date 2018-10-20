@@ -354,6 +354,7 @@ const MainClass = class Project {
 	                throw new Error(`Nothing to do for application ${app.__code} (no webpack files detected)`);
 	            }
 	            const application = new Application(this.include(files, app.__code), this.getParams(), this);
+	            application.setBuildRootFolder(dstRoot);
 	            application.setName(app.__code);
 
 	            apps.push(application);
