@@ -351,11 +351,9 @@ const MainClass = class Project {
                 const includes = this.include(files, app.__code);
 	            console.dir(includes);
 
-	            // const application = new Application(this.getParams(), this);
-	            // application.makeTasks(includes);
-	            // application.setName(app.__code);
-	            // application.setRootFolder(`${this.getApplicationFolder()}/${Util.getBaseName(dstRoot)}`);
-	            //
+	            const application = new Application(includes, this.getParams(), this);
+	            application.setName(app.__code);
+
 	            // apps.push(application);
             });
 
