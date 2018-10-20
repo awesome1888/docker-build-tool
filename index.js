@@ -35,8 +35,11 @@ const MainClass = class Project {
         return this._options || {};
     }
 
-    async run() {
+    getApplicationFolder() {
+        return this.getParams().srcFolder || '';
+    }
 
+    async run() {
         // pre-checks
         const haveDockerCompose = await Util.testCmd('docker-compose -v', 'docker-compose version').catch(() => {
             return false;
@@ -47,7 +50,17 @@ const MainClass = class Project {
         }
 
         const apps = this.getApplications();
+	    console.dir(apps);
+	    return;
+
         const destinationFolder = _.isStringNotEmpty(this.getParams().destinationFolder) ? this.getParams().destinationFolder : '#TASK_FOLDER#build/#MODE_NAME#/';
+
+	    await apps[1].getTasks()[0].build();
+	    console.dir('build done!');
+	    // console.dir(apps);
+	    // console.dir(destinationFolder);
+
+        return;
 
         // spin-up all loops and watch files
         this.hangOnSigInt();
@@ -64,7 +77,7 @@ const MainClass = class Project {
 
         // 1) build all
         apps.forEach((app) => {
-            Object.values(app.getTaskMap()).forEach((task) => {
+            app.getTasks().forEach((task) => {
                 this.orderToBuild(app, task, {
                     ...params,
                     stdoutTo: this.getStream(app),
@@ -74,25 +87,25 @@ const MainClass = class Project {
         });
 
         // 2) watch all
-        apps.forEach((app) => {
-            Object.values(app.getTaskMap()).forEach((task) => {
-                // all src files
-                task.watch(() => {
-                    this.orderToBuild(app, task, {
-                        production: false,
-                        temporarySubFolder: this.getTemporarySubFolder(),
-                        destinationFolder,
-                        stdoutTo: this.getStream(app),
-                        stderrTo: this.getStream(app),
-                    });
-                });
-                // all package.json-s
-                // todo
-            });
-
-            // all dockerfiles
-            // todo
-        });
+        // apps.forEach((app) => {
+        //     app.getTasks().forEach((task) => {
+        //         // all src files
+        //         task.watch(() => {
+        //             this.orderToBuild(app, task, {
+        //                 production: false,
+        //                 temporarySubFolder: this.getTemporarySubFolder(),
+        //                 destinationFolder,
+        //                 stdoutTo: this.getStream(app),
+        //                 stderrTo: this.getStream(app),
+        //             });
+        //         });
+        //         // all package.json-s
+        //         // todo
+        //     });
+        //
+        //     // all dockerfiles
+        //     // todo
+        // });
 
         // docker-compose
         this._watcherDockerCompose = chokidar.watch(this.getCompositionFile(), {
@@ -321,29 +334,79 @@ const MainClass = class Project {
 
             const apps = [];
 
+            // parse dockerfile composition and get build instructions
             Object.values(composition).forEach((app) => {
                 const context = _.getValue(app, 'build.context');
                 if (!_.isStringNotEmpty(context)) {
                     throw new Error(`Illegal context for app ${app.__code}`);
                 }
-                const file = `${dockerBase}/${app.build.context}/application.js`;
+                const dstRoot = `${dockerBase}/${app.build.context}/`;
 
-                if (!Util.testFile(file)) {
-                    throw new Error(`Application file not found: ${file}`);
-                }
+                // here we resolve webpack files...
+                const files = this.resolveWebpackFiles(dstRoot);
+	            if (!_.isArrayNotEmpty(files)) {
+	                throw new Error(`Nothing to do for application ${app.__code} (no webpack files detected)`);
+	            }
 
-                const Application = require(file);
-                const application = new Application(this.getParams(), this);
+                const includes = this.include(files, app.__code);
+	            console.dir(includes);
 
-                application.setName(app.__code);
-
-                apps.push(application);
+	            // const application = new Application(this.getParams(), this);
+	            // application.makeTasks(includes);
+	            // application.setName(app.__code);
+	            // application.setRootFolder(`${this.getApplicationFolder()}/${Util.getBaseName(dstRoot)}`);
+	            //
+	            // apps.push(application);
             });
 
             this._applications = apps;
         }
 
         return this._applications;
+    }
+
+	include(files, appCode) {
+		const res = {};
+
+		files.forEach((file) => {
+			const inc = require(file);
+
+			// look for main builder
+			if (_.isFunction(inc)) {
+				res.getWebpackConfiguration = inc;
+			} else if(_.isFunction(inc.getWebpackConfiguration)) {
+			    res.getWebpackConfiguration = inc.getWebpackConfiguration;
+            }
+
+            res.getSrcFolder = _.isFunction(inc.getSrcFolder) ? inc.getSrcFolder : null;
+            res.getParameters = _.isFunction(inc.getParameters) ? inc.getParameters : () => ({});
+
+            // check
+            if (!_.isFunction(res.getWebpackConfiguration)) {
+                throw new Error(`Webpack configurator does not export .getWebpackConfiguration() function for app "${appCode}": ${file}`);
+            }
+			if (!_.isFunction(res.getSrcFolder)) {
+				throw new Error(`Webpack configurator does not export .getSrcFolder() function for app "${appCode}": ${file}`);
+			}
+        });
+
+		return res;
+    }
+
+	resolveWebpackFiles(root) {
+        const result = [];
+
+        const one = `${root}/webpack.js`;
+        if (Util.testFile(one)) {
+            result.push(one);
+        } else {
+            const sub = `${root}/webpack/`;
+            if (Util.testFolder(sub)) {
+                return Util.readFolder(sub).map(x => `${sub}/${x}`).filter(x => Util.testFile(x));
+            }
+        }
+
+        return result;
     }
 
     getComposition() {
