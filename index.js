@@ -48,14 +48,15 @@ const MainClass = class Project {
             return;
         }
 
-        const apps = this.getApplications();
         const destinationFolder = _.isStringNotEmpty(this.getParams().destinationFolder) ? this.getParams().destinationFolder : '#TASK_FOLDER#build/#MODE_NAME#/';
+        const apps = this.getApplications();
+
         // spin-up all loops and watch files
-        // this.hangOnSigInt();
-        // this.spinUpBuildLoop();
-        // this.spinUpBuildImagesLoop();
-        // this.spinUpCompositionRestartLoop();
-        // this.getLogPoller().spinUp();
+        this.hangOnSigInt();
+        this.spinUpBuildLoop();
+        this.spinUpBuildImagesLoop();
+        this.spinUpCompositionRestartLoop();
+        this.getLogPoller().spinUp();
 
         const params = {
             production: false,
@@ -63,21 +64,21 @@ const MainClass = class Project {
             destinationFolder,
         };
 
-        for (let k = 0; k < apps.length; k++) {
-            const ts = apps[k].getTasks();
-	        for (let m = 0; m < ts.length; m++) {
-		        console.dir('making next');
-	            await ts[m].build({
-		            ...params,
-		            stdoutTo: this.getStream(apps[k]),
-		            stderrTo: this.getStream(apps[k]),
-	            });
-	        }
-        }
-
-        console.dir('DONE =============');
-
-        return;
+        // for (let k = 0; k < apps.length; k++) {
+        //     const ts = apps[k].getTasks();
+	     //    for (let m = 0; m < ts.length; m++) {
+		 //        console.dir('making next');
+	     //        await ts[m].build({
+		 //            ...params,
+		 //            stdoutTo: this.getStream(apps[k]),
+		 //            stderrTo: this.getStream(apps[k]),
+	     //        });
+	     //    }
+        // }
+        //
+        // console.dir('DONE =============');
+        //
+        // return;
 
         // 1) build all
         apps.forEach((app) => {
@@ -96,9 +97,7 @@ const MainClass = class Project {
         //         // all src files
         //         task.watch(() => {
         //             this.orderToBuild(app, task, {
-        //                 production: false,
-        //                 temporarySubFolder: this.getTemporarySubFolder(),
-        //                 destinationFolder,
+        //                 ...params
         //                 stdoutTo: this.getStream(app),
         //                 stderrTo: this.getStream(app),
         //             });
@@ -217,7 +216,8 @@ const MainClass = class Project {
             }
 
             next();
-        }).catch(() => {
+        }).catch((e) => {
+            console.dir(e);
             // =(
             next();
         });
@@ -267,8 +267,9 @@ const MainClass = class Project {
             ctx.setDockerImageName(this.getComposition().makeImageName(change.application));
             const docker = new Docker(ctx);
 
-            return docker.build().catch(() => {
+            return docker.build().catch((e) => {
                 failure = true;
+                console.dir(e);
                 this.informImageBuildFailed(change);
             });
         })).then(() => {
@@ -331,7 +332,7 @@ const MainClass = class Project {
     // ///////////////////////
     // aux getters
 
-    getApplications() {
+    getApplications(params = {}) {
         if (!this._applications) {
             const composition = this.getComposition().getSchema();
             const dockerBase = Util.getParentPath(this.getCompositionFile());
@@ -502,7 +503,8 @@ const MainClass = class Project {
             const path = Path.fillTemplate(`${Path.getToolTemporaryFolder()}/${this.getTemporarySubFolder()}/log/`, {
                 application,
             });
-            
+
+            console.dir(`Stream requested: "${`${path}/output`}"`);
             this._streams[code] = Util.makeStream(`${path}/output`);
         }
 
