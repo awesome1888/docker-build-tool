@@ -76,18 +76,30 @@ const MainClass = class Project {
             });
         });
 
-        // 2) watch all
-        await Promise.all(this.getAllTasks().map(t => t.watch(
-          (stats, task, app) => {
-              this.orderToBuild(app, task, {
-                  ...params,
-                  stdoutTo: this.getStream(app),
-                  stderrTo: this.getStream(app),
-              });
-          }
+        // 2) watch all tasks
+        await Promise.all(this.getAllTasks().map(task => {
 
-          // todo: watch task package.json-s
-        )));
+            // watch package.json
+            this._watches.push(this.watch(task.getPackageJsonFile(), 'change', () => {
+                const app = task.getApplication();
+                this.orderToBuild(app, task, {
+                    ...params,
+                    stdoutTo: this.getStream(app),
+                    stderrTo: this.getStream(app),
+                });
+            }));
+
+            // watch source code
+            return task.watch(
+              (stats, task, app) => {
+                  this.orderToBuild(app, task, {
+                      ...params,
+                      stdoutTo: this.getStream(app),
+                      stderrTo: this.getStream(app),
+                  });
+              }
+            );
+        }));
 
         // todo: watch each app dockerfile
 
