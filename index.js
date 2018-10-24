@@ -66,13 +66,13 @@ const MainClass = class Project {
         this.getLogPoller().spinUp();
 
         // 1) build all
-        apps.forEach((app) => {
-            app.getTasks().forEach((task) => {
-                this.orderToBuild(app, task, {
-                    ...params,
-                    stdoutTo: this.getStream(app),
-                    stderrTo: this.getStream(app),
-                });
+        this.getAllTasks().forEach((task) => {
+            console.dir(task.getPackageJsonFile());
+            const app = task.getApplication();
+            this.orderToBuild(app, task, {
+                ...params,
+                stdoutTo: this.getStream(app),
+                stderrTo: this.getStream(app),
             });
         });
 
