@@ -15,6 +15,7 @@ const MainClass = class Project {
     constructor(options = {}) {
         this._options = options;
         this._streams = {};
+        this._watches = [];
 
         this.buildNext = this.buildNext.bind(this);
         this.buildImagesNext = this.buildImagesNext.bind(this);
@@ -49,7 +50,13 @@ const MainClass = class Project {
         }
 
         const destinationFolder = _.isStringNotEmpty(this.getParams().destinationFolder) ? this.getParams().destinationFolder : '#TASK_FOLDER#build/#MODE_NAME#/';
-        const apps = this.getApplications();
+        const params = {
+            production: false,
+            temporarySubFolder: this.getTemporarySubFolder(),
+            destinationFolder,
+        };
+
+        const apps = this.getApplications(params);
 
         // spin-up all loops and watch files
         this.hangOnSigInt();
@@ -57,28 +64,6 @@ const MainClass = class Project {
         this.spinUpBuildImagesLoop();
         this.spinUpCompositionRestartLoop();
         this.getLogPoller().spinUp();
-
-        const params = {
-            production: false,
-            temporarySubFolder: this.getTemporarySubFolder(),
-            destinationFolder,
-        };
-
-        // for (let k = 0; k < apps.length; k++) {
-        //     const ts = apps[k].getTasks();
-	     //    for (let m = 0; m < ts.length; m++) {
-		 //        console.dir('making next');
-	     //        await ts[m].build({
-		 //            ...params,
-		 //            stdoutTo: this.getStream(apps[k]),
-		 //            stderrTo: this.getStream(apps[k]),
-	     //        });
-	     //    }
-        // }
-        //
-        // console.dir('DONE =============');
-        //
-        // return;
 
         // 1) build all
         apps.forEach((app) => {
@@ -92,34 +77,45 @@ const MainClass = class Project {
         });
 
         // 2) watch all
-        // apps.forEach((app) => {
-        //     app.getTasks().forEach((task) => {
-        //         // all src files
-        //         task.watch(() => {
-        //             this.orderToBuild(app, task, {
-        //                 ...params
-        //                 stdoutTo: this.getStream(app),
-        //                 stderrTo: this.getStream(app),
-        //             });
-        //         });
-        //         // all package.json-s
-        //         // todo
-        //     });
-        //
-        //     // all dockerfiles
-        //     // todo
-        // });
+        await Promise.all(this.getAllTasks().map(t => t.watch(
+          (stats, task, app) => {
+              this.orderToBuild(app, task, {
+                  ...params,
+                  stdoutTo: this.getStream(app),
+                  stderrTo: this.getStream(app),
+              });
+          }
+
+          // todo: watch task package.json-s
+        )));
+
+        // todo: watch each app dockerfile
 
         // docker-compose
-        this._watcherDockerCompose = chokidar.watch(this.getCompositionFile(), {
+        this._watches.push(this.watch(this.getCompositionFile(), 'change', () => {
+            this.orderToRestartComposition();
+        }));
+
+        this.log('Watching files...');
+    }
+
+    watch(what, eventType, cb) {
+        const watcher = chokidar.watch(what, {
             ignoreInitial: true,
             followSymlinks: true,
         });
-        this._watcherDockerCompose.on('change', () => {
-            this.orderToRestartComposition();
+        watcher.on(eventType, cb);
+
+        return watcher;
+    }
+
+    getAllTasks() {
+        let tasks = [];
+        this.getApplications().forEach((app) => {
+            tasks = _.union(tasks, app.getTasks());
         });
 
-        this.log('Watching files...');
+        return tasks;
     }
 
     informActionFailed(change) {
@@ -356,7 +352,7 @@ const MainClass = class Project {
 	            if (!_.isArrayNotEmpty(files)) {
 	                throw new Error(`Nothing to do for application ${app.__code} (no webpack files detected)`);
 	            }
-	            const application = new Application(this.include(files, app.__code), this.getParams(), this);
+	            const application = new Application(this.include(files, app.__code), this.getParams(), this, params);
 	            application.setBuildRootFolder(dstRoot);
 	            application.setName(app.__code);
 
@@ -476,7 +472,11 @@ const MainClass = class Project {
                 this.getLogPoller().halt();
             }
 
+            // todo: stop all this._watches
+
             return this.closeStreams().then(() => {
+                return this.getAllTasks().map(t => t.closeWatcher());
+            }).then(() => {
                 halt();
             });
         };
