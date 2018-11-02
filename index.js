@@ -554,3 +554,4 @@ module.exports = MainClass;
 module.exports.default = MainClass;
 module.exports.Application = Application;
 module.exports.WebpackTool = WebpackTool;
+module.exports.Util = Util;
