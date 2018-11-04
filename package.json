@@ -1,6 +1,6 @@
 {
   "name": "docker-build-tool",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "A build tool based on docker and whatever (typically, webpack) working together",
   "main": "index.js",
   "directories": {
