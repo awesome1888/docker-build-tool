@@ -22,6 +22,7 @@ const MainClass = class Project {
         this.compositionRestartNext = this.compositionRestartNext.bind(this);
 
         this.log = this.log.bind(this);
+        this.debug = this.debug.bind(this);
     }
 
     getName() {
@@ -37,8 +38,8 @@ const MainClass = class Project {
     }
 
     async run() {
-	    console.dir(`Project folder: ${this.getProjectFolder()}`);
-	    console.dir(`Compose file: ${this.getCompositionFile()}`);
+	    this.debug(`Project folder: ${this.getProjectFolder()}`);
+	    this.debug(`Compose file: ${this.getCompositionFile()}`);
 
         // pre-checks
         const haveDockerCompose = await Util.testCmd('docker-compose -v', 'docker-compose version').catch(() => {
@@ -56,8 +57,6 @@ const MainClass = class Project {
             destinationFolder,
         };
 
-        const apps = this.getApplications(params);
-
         // spin-up all loops and watch files
         this.hangOnSigInt();
         this.spinUpBuildLoop();
@@ -67,7 +66,7 @@ const MainClass = class Project {
 
         // 1) build all
         this.getAllTasks().forEach((task) => {
-            console.dir(task.getPackageJsonFile());
+            this.debug(task.getPackageJsonFile());
             const app = task.getApplication();
             this.orderToBuild(app, task, {
                 ...params,
@@ -107,8 +106,6 @@ const MainClass = class Project {
         this._watches.push(this.watch(this.getCompositionFile(), 'change', () => {
             this.orderToRestartComposition();
         }));
-
-        this.log('Watching files...');
     }
 
     watch(what, eventType, cb) {
@@ -345,7 +342,7 @@ const MainClass = class Project {
             const composition = this.getComposition().getSchema();
             const dockerBase = Util.getParentPath(this.getCompositionFile());
 
-	        console.dir(`Docker base: ${dockerBase}`);
+	        this.debug(`Docker base: ${dockerBase}`);
 
             const apps = [];
 
@@ -357,7 +354,7 @@ const MainClass = class Project {
                 }
                 const dstRoot = `${dockerBase}/${app.build.context}/`;
 
-	            console.dir(`Docker context for the app "${app.__code}": ${dstRoot}`);
+	            this.debug(`Docker context for the app "${app.__code}": ${dstRoot}`);
 
                 // here we resolve webpack files...
                 const files = this.resolveWebpackFiles(dstRoot);
@@ -516,7 +513,7 @@ const MainClass = class Project {
                 application,
             });
 
-            console.dir(`Stream requested: "${`${path}/output`}"`);
+            this.debug(`Stream requested: "${`${path}/output`}"`);
             this._streams[code] = Util.makeStream(`${path}/output`);
         }
 
@@ -537,6 +534,14 @@ const MainClass = class Project {
         }
 
         return Promise.all(toWait);
+    }
+
+    debug(data) {
+        if (!this.getParams().debug) {
+            return;
+        }
+
+        this.log(data);
     }
 
     log(data) {
