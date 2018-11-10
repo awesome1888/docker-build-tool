@@ -93,6 +93,7 @@ const MainClass = class Project {
             // watch source code
             return task.watch(
               (stats, task, app) => {
+                  // console.dir('SOME SHIT CHANGED');
                   this.orderToBuild(app, task, {
                       ...params,
                       stdoutTo: this.getStream(app),
@@ -146,6 +147,7 @@ const MainClass = class Project {
     }
 
     orderToBuild(application, task, params) {
+        // console.dir('ordering to build new!');
         const q = this.getBuildQueue();
         q.push({application, task, params});
     }
@@ -223,8 +225,7 @@ const MainClass = class Project {
             }
 
             next();
-        }).catch((e) => {
-            console.dir(e);
+        }).catch(() => {
             // =(
             next();
         });
@@ -276,7 +277,6 @@ const MainClass = class Project {
 
             return docker.build().catch((e) => {
                 failure = true;
-                console.dir(e);
                 this.informImageBuildFailed(change);
             });
         })).then(() => {
