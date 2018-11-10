@@ -206,10 +206,6 @@ const MainClass = class Project {
                 const names = [];
                 const imageNames = {};
                 all.forEach((change) => {
-
-                    console.dir('P');
-                    console.dir(change.params.forceRebuildImages);
-
                     if ((change.params.forceRebuildImages || change.task.needRebuildImage()) && !imageNames[change.application.getName()]) {
                         images.push(change);
                         imageNames[change.application.getName()] = true;
