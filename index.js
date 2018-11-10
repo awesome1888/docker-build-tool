@@ -26,7 +26,7 @@ const MainClass = class Project {
     }
 
     getName() {
-        return this.getParams().name;
+        return this.getParams().name || Util.getBaseName(this.getProjectFolder());
     }
 
 	getProjectFolder() {
@@ -38,6 +38,7 @@ const MainClass = class Project {
     }
 
     async run() {
+        this.debug(`Project name: ${this.getName()}`);
 	    this.debug(`Project folder: ${this.getProjectFolder()}`);
 	    this.debug(`Compose file: ${this.getCompositionFile()}`);
 
