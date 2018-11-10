@@ -73,6 +73,7 @@ const MainClass = class Project {
                 ...params,
                 stdoutTo: this.getStream(app),
                 stderrTo: this.getStream(app),
+                forceRebuildImages: true,
             });
         });
 
@@ -205,7 +206,11 @@ const MainClass = class Project {
                 const names = [];
                 const imageNames = {};
                 all.forEach((change) => {
-                    if (change.task.needRebuildImage() && !imageNames[change.application.getName()]) {
+
+                    console.dir('P');
+                    console.dir(change.params.forceRebuildImages);
+
+                    if ((change.params.forceRebuildImages || change.task.needRebuildImage()) && !imageNames[change.application.getName()]) {
                         images.push(change);
                         imageNames[change.application.getName()] = true;
                     }
